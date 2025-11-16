@@ -40,16 +40,13 @@ func handleConnection(listener net.Conn) {
 		return
 	}
 
-	fmt.Println("HEADERS", requestHeaders.Headers)
 	val, ok := requestHeaders.Headers["Content-Length"]
-	fmt.Println(ok, val)
 	var body string
 	if ok {
 		contentLength, err := strconv.Atoi(val)
-		if err != nil{
-			fmt.Printf("Couldnt parse Content-Length (%s)", val)
+		if err == nil{
+			body = readBody(listener, contentLength)
 		}
-		body = readBody(listener, contentLength)
 	}
 	fmt.Println("Body: ", body)
 }
@@ -61,11 +58,10 @@ func readBody(source net.Conn, contentLength int) string {
 		chunck := make([]byte, min(contentLength, 8))
 		size, err := source.Read(chunck)
 		if err != nil {
-			fmt.Println(err)
+			break
 		}
 
 		chunck = chunck[:size]
-		fmt.Println(string(chunck))
 		contentLength -= size
 		s += string(chunck)
 	}
@@ -88,12 +84,10 @@ func getLinesFromReader(r io.ReadCloser) <- chan string {
 				break
 			}
 			chunck = chunck[:size]
-			//fmt.Println("Read chunck", string(chunck), chunck)
 			newLineIndex := bytes.IndexByte(chunck, '\n')
 			for newLineIndex != -1 {
 				s += string(chunck[:newLineIndex])
 				chunck = chunck[newLineIndex + 1:]
-				//fmt.Println("Remaining chunck:", string(chunck), chunck, "inserting ", s, "in the channel")
 				if s == "" || s == "\r" {
 					foundSeparator = true
 				}
